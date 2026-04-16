@@ -3,85 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Reset Tracker</title>
+    <title>Daily Content Tracker</title>
     <style>
         :root {
-            --bg: #121212;
-            --card: #1e1e1e;
-            --text: #e0e0e0;
-            --accent: #03dac6;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --accent: #38bdf8;
+            --success: #22c55e;
         }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 2rem; }
-        .container { width: 100%; max-width: 400px; background: var(--card); padding: 2rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-top: 0; }
-        .task-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #333; cursor: pointer; }
-        .task-item:last-child { border: none; }
-        input[type="checkbox"] { margin-right: 15px; transform: scale(1.5); accent-color: var(--accent); }
-        .completed { text-decoration: line-through; opacity: 0.5; }
-        .reset-note { font-size: 0.8rem; color: #888; margin-top: 20px; text-align: center; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 2rem; margin: 0; }
+        .container { width: 100%; max-width: 450px; background: var(--card); padding: 2rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
+        
+        h2 { margin-top: 0; font-weight: 600; color: var(--accent); }
+        
+        /* Progress Bar */
+        .progress-container { background: #334155; border-radius: 10px; height: 10px; margin: 20px 0; overflow: hidden; }
+        #progressFill { background: var(--success); height: 100%; width: 0%; transition: width 0.4s ease; }
+
+        .task-item { display: flex; align-items: center; padding: 15px; background: #334155; border-radius: 8px; margin-bottom: 10px; transition: transform 0.1s; cursor: pointer; }
+        .task-item:active { transform: scale(0.98); }
+        
+        input[type="checkbox"] { margin-right: 15px; width: 20px; height: 20px; cursor: pointer; accent-color: var(--success); }
+        .task-text { flex-grow: 1; font-size: 0.95rem; line-height: 1.4; }
+        .completed { text-decoration: line-through; opacity: 0.4; }
+        
+        .reset-info { font-size: 0.75rem; color: #94a3b8; text-align: center; margin-top: 20px; border-top: 1px solid #334155; pt: 15px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Daily Tasks</h2>
-    <div id="taskList">
-        </div>
-    <p class="reset-note">Tasks reset automatically at midnight.</p>
+    <h2>Daily Workflow</h2>
+    
+    <div class="progress-container">
+        <div id="progressFill"></div>
+    </div>
+
+    <div id="taskList"></div>
+
+    <div class="reset-info">
+        Data clears at midnight • Auto-saves to browser
+    </div>
 </div>
 
 <script>
-    // 1. Define your tasks here
-    const tasks = [
+    // YOUR SPECIFIC TASKS
+    const defaultTasks = [
         "Mind Exposed video schedule for tomorrow YouTube",
-        "QuickPrep Kitechen video schedule for tomorrow YouTube",
-        "QuickPrep Kitechen video schedule for today Facebook",
-        "QuickPrep Kitechen video posted on today Instagram",
-        "QuickPrep Kitechen video schedule for today Pinterest"
+        "QuickPrep Kitchen video schedule for tomorrow YouTube",
+        "QuickPrep Kitchen video schedule for today Facebook",
+        "QuickPrep Kitchen video posted on today Instagram",
+        "QuickPrep Kitchen video schedule for today Pinterest"
     ];
 
-    const taskListData = JSON.parse(localStorage.getItem('dailyTasks')) || tasks.map(t => ({ name: t, completed: false }));
-    const lastReset = localStorage.getItem('lastResetDate');
+    let taskData = JSON.parse(localStorage.getItem('contentTasks')) || 
+                   defaultTasks.map(t => ({ name: t, done: false }));
 
-    function checkDailyReset() {
-        const today = new Date().toLocaleDateString();
-        if (lastReset !== today) {
-            // It's a new day! Reset everything.
-            taskListData.forEach(task => task.completed = false);
-            localStorage.setItem('lastResetDate', today);
-            saveData();
+    function checkReset() {
+        const today = new Date().toDateString();
+        const lastDate = localStorage.getItem('lastAccessDate');
+        
+        if (lastDate !== today) {
+            taskData.forEach(t => t.done = false);
+            localStorage.setItem('lastAccessDate', today);
+            save();
         }
     }
 
-    function renderTasks() {
-        const listContainer = document.getElementById('taskList');
-        listContainer.innerHTML = '';
+    function render() {
+        const list = document.getElementById('taskList');
+        list.innerHTML = '';
         
-        taskListData.forEach((task, index) => {
-            const div = document.createElement('div');
-            div.className = 'task-item';
-            div.innerHTML = `
-                <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${index})">
-                <span class="${task.completed ? 'completed' : ''}">${task.name}</span>
+        let completedCount = 0;
+
+        taskData.forEach((task, i) => {
+            if(task.done) completedCount++;
+            
+            const item = document.createElement('div');
+            item.className = 'task-item';
+            item.innerHTML = `
+                <input type="checkbox" ${task.done ? 'checked' : ''}>
+                <span class="task-text ${task.done ? 'completed' : ''}">${task.name}</span>
             `;
-            div.onclick = () => toggleTask(index);
-            listContainer.appendChild(div);
+            item.onclick = () => toggle(i);
+            list.appendChild(item);
         });
+
+        // Update Progress Bar
+        const percent = (completedCount / taskData.length) * 100;
+        document.getElementById('progressFill').style.width = percent + '%';
     }
 
-    window.toggleTask = function(index) {
-        taskListData[index].completed = !taskListData[index].completed;
-        saveData();
-        renderTasks();
-    };
-
-    function saveData() {
-        localStorage.setItem('dailyTasks', JSON.stringify(taskListData));
+    function toggle(index) {
+        taskData[index].done = !taskData[index].done;
+        save();
+        render();
     }
 
-    // Initialize
-    checkDailyReset();
-    renderTasks();
+    function save() {
+        localStorage.setItem('contentTasks', JSON.stringify(taskData));
+    }
+
+    // Run on Load
+    checkReset();
+    render();
 </script>
 
 </body>
