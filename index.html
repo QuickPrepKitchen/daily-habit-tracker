@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Reset Tracker</title>
+    <style>
+        :root {
+            --bg: #121212;
+            --card: #1e1e1e;
+            --text: #e0e0e0;
+            --accent: #03dac6;
+        }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 2rem; }
+        .container { width: 100%; max-width: 400px; background: var(--card); padding: 2rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-top: 0; }
+        .task-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #333; cursor: pointer; }
+        .task-item:last-child { border: none; }
+        input[type="checkbox"] { margin-right: 15px; transform: scale(1.5); accent-color: var(--accent); }
+        .completed { text-decoration: line-through; opacity: 0.5; }
+        .reset-note { font-size: 0.8rem; color: #888; margin-top: 20px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Daily Tasks</h2>
+    <div id="taskList">
+        </div>
+    <p class="reset-note">Tasks reset automatically at midnight.</p>
+</div>
+
+<script>
+    // 1. Define your tasks here
+    const tasks = [
+        "Drink 3L Water",
+        "Morning Exercise",
+        "Read 10 Pages",
+        "Deep Work Session",
+        "Clean Workspace"
+    ];
+
+    const taskListData = JSON.parse(localStorage.getItem('dailyTasks')) || tasks.map(t => ({ name: t, completed: false }));
+    const lastReset = localStorage.getItem('lastResetDate');
+
+    function checkDailyReset() {
+        const today = new Date().toLocaleDateString();
+        if (lastReset !== today) {
+            // It's a new day! Reset everything.
+            taskListData.forEach(task => task.completed = false);
+            localStorage.setItem('lastResetDate', today);
+            saveData();
+        }
+    }
+
+    function renderTasks() {
+        const listContainer = document.getElementById('taskList');
+        listContainer.innerHTML = '';
+        
+        taskListData.forEach((task, index) => {
+            const div = document.createElement('div');
+            div.className = 'task-item';
+            div.innerHTML = `
+                <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${index})">
+                <span class="${task.completed ? 'completed' : ''}">${task.name}</span>
+            `;
+            div.onclick = () => toggleTask(index);
+            listContainer.appendChild(div);
+        });
+    }
+
+    window.toggleTask = function(index) {
+        taskListData[index].completed = !taskListData[index].completed;
+        saveData();
+        renderTasks();
+    };
+
+    function saveData() {
+        localStorage.setItem('dailyTasks', JSON.stringify(taskListData));
+    }
+
+    // Initialize
+    checkDailyReset();
+    renderTasks();
+</script>
+
+</body>
+</html>
