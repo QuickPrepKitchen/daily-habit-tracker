@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Content Tracker</title>
+    <title>Creator Daily Checklist</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -12,38 +12,43 @@
             --accent: #38bdf8;
             --success: #22c55e;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 2rem; margin: 0; }
-        .container { width: 100%; max-width: 450px; background: var(--card); padding: 2rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 20px; }
+        .container { width: 100%; max-width: 450px; background: var(--card); padding: 2rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
         
-        h2 { margin-top: 0; font-weight: 600; color: var(--accent); }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid #334155; padding-bottom: 1rem; }
+        h2 { margin: 0; font-size: 1.25rem; letter-spacing: -0.025em; }
         
-        /* Progress Bar */
-        .progress-container { background: #334155; border-radius: 10px; height: 10px; margin: 20px 0; overflow: hidden; }
-        #progressFill { background: var(--success); height: 100%; width: 0%; transition: width 0.4s ease; }
-
-        .task-item { display: flex; align-items: center; padding: 15px; background: #334155; border-radius: 8px; margin-bottom: 10px; transition: transform 0.1s; cursor: pointer; }
-        .task-item:active { transform: scale(0.98); }
+        .stats { font-size: 0.9rem; font-weight: bold; color: var(--accent); }
         
-        input[type="checkbox"] { margin-right: 15px; width: 20px; height: 20px; cursor: pointer; accent-color: var(--success); }
-        .task-text { flex-grow: 1; font-size: 0.95rem; line-height: 1.4; }
-        .completed { text-decoration: line-through; opacity: 0.4; }
+        .task-item { 
+            display: flex; align-items: center; padding: 14px; margin-bottom: 8px;
+            background: rgba(255,255,255,0.03); border-radius: 8px; transition: all 0.2s; cursor: pointer;
+        }
+        .task-item:hover { background: rgba(255,255,255,0.07); }
         
-        .reset-info { font-size: 0.75rem; color: #94a3b8; text-align: center; margin-top: 20px; border-top: 1px solid #334155; pt: 15px; }
+        input[type="checkbox"] { 
+            width: 20px; height: 20px; margin-right: 15px; cursor: pointer;
+            accent-color: var(--success);
+        }
+        
+        .task-text { font-size: 0.95rem; line-height: 1.4; }
+        .completed .task-text { text-decoration: line-through; opacity: 0.4; }
+        
+        .footer-info { margin-top: 1.5rem; font-size: 0.75rem; color: #64748b; text-align: center; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Daily Workflow</h2>
-    
-    <div class="progress-container">
-        <div id="progressFill"></div>
-    </div>
+    <header>
+        <h2>Daily Content Ops</h2>
+        <div class="stats" id="progress">0/4 Done</div>
+    </header>
 
     <div id="taskList"></div>
 
-    <div class="reset-info">
-        Data clears at midnight • Auto-saves to browser
+    <div class="footer-info">
+        Resetting daily at midnight • Local Storage Active
     </div>
 </div>
 
@@ -51,63 +56,62 @@
     // YOUR SPECIFIC TASKS
     const defaultTasks = [
         "Mind Exposed video schedule for tomorrow YouTube",
-        "QuickPrep Kitchen video schedule for tomorrow YouTube",
+        "ThinkEdge video schedule for tomorrow YouTube",
         "QuickPrep Kitchen video schedule for today Facebook",
-        "QuickPrep Kitchen video posted on today Instagram",
-        "QuickPrep Kitchen video schedule for today Pinterest"
+        "QuickPrep Kitchen video posted on today Instagram"
     ];
 
-    let taskData = JSON.parse(localStorage.getItem('contentTasks')) || 
-                   defaultTasks.map(t => ({ name: t, done: false }));
+    let taskData = [];
 
-    function checkReset() {
-        const today = new Date().toDateString();
-        const lastDate = localStorage.getItem('lastAccessDate');
-        
-        if (lastDate !== today) {
-            taskData.forEach(t => t.done = false);
-            localStorage.setItem('lastAccessDate', today);
+    function init() {
+        const saved = localStorage.getItem('creatorTasks');
+        const lastReset = localStorage.getItem('lastResetDate');
+        const today = new Date().toLocaleDateString();
+
+        if (saved && lastReset === today) {
+            taskData = JSON.parse(saved);
+        } else {
+            // New day or first time use
+            taskData = defaultTasks.map(name => ({ name, completed: false }));
+            localStorage.setItem('lastResetDate', today);
             save();
         }
+        render();
+    }
+
+    function toggleTask(index) {
+        taskData[index].completed = !taskData[index].completed;
+        save();
+        render();
+    }
+
+    function save() {
+        localStorage.setItem('creatorTasks', JSON.stringify(taskData));
     }
 
     function render() {
         const list = document.getElementById('taskList');
         list.innerHTML = '';
         
-        let completedCount = 0;
+        let doneCount = 0;
 
         taskData.forEach((task, i) => {
-            if(task.done) completedCount++;
+            if(task.completed) doneCount++;
             
             const item = document.createElement('div');
-            item.className = 'task-item';
+            item.className = `task-item ${task.completed ? 'completed' : ''}`;
             item.innerHTML = `
-                <input type="checkbox" ${task.done ? 'checked' : ''}>
-                <span class="task-text ${task.done ? 'completed' : ''}">${task.name}</span>
+                <input type="checkbox" ${task.completed ? 'checked' : ''}>
+                <span class="task-text">${task.name}</span>
             `;
-            item.onclick = () => toggle(i);
+            item.onclick = () => toggleTask(i);
             list.appendChild(item);
         });
 
-        // Update Progress Bar
-        const percent = (completedCount / taskData.length) * 100;
-        document.getElementById('progressFill').style.width = percent + '%';
+        document.getElementById('progress').innerText = `${doneCount}/${taskData.length} Done`;
     }
 
-    function toggle(index) {
-        taskData[index].done = !taskData[index].done;
-        save();
-        render();
-    }
-
-    function save() {
-        localStorage.setItem('contentTasks', JSON.stringify(taskData));
-    }
-
-    // Run on Load
-    checkReset();
-    render();
+    init();
 </script>
 
 </body>
